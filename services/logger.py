@@ -12,3 +12,4 @@ class LoggerService:
     def log_env_details(self):
         print(self.settings.model_name)
  
+# Git staging demo

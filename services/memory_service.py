@@ -38,4 +38,5 @@ class MemoryService:
     def clear_history(self):
         with self._lock:  # Fixed: changed self.lock to self._lock
             self._conversations.clear()
-    
+
+#memory service comment to check git
