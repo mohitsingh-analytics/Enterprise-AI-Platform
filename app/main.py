@@ -16,10 +16,14 @@ from services.memory_service import MemoryService
 from ingestion.ingestion_service import IngestionService
 from app.models import EvaluationRequest
 from app.models import ChatRequest
+from app.models import DocLoad
 from pydantic import BaseModel
 from fastapi import Depends
 import uuid
+from app.middleware import RequestMiddleware
+
 app = FastAPI()
+app.add_middleware(RequestMiddleware)
 
 @app.get("/")
 def home(logger: LoggerService = Depends(get_log_service)):
@@ -27,8 +31,10 @@ def home(logger: LoggerService = Depends(get_log_service)):
     return {"message": "Enterprise AI Platform is running"}
 
 @app.post("/documents/upload")
-def uploaddocs(ingest_service: IngestionService=Depends(get_ingestion_service)):
-    result = ingest_service.ingest("LeavePolicy.pdf")
+def uploaddocs(
+    request: DocLoad,
+    ingest_service: IngestionService=Depends(get_ingestion_service)):
+    result = ingest_service.ingest(request.docname)
     return result
     
 

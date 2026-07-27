@@ -1,4 +1,10 @@
 from anthropic import Anthropic
+import logging
+
+logging.basicConfig(level=logging.INFO, 
+                    format="%(asctime)s | %(levelname)s | %(message)s")
+logger = logging.getLogger("Enterprise AI")
+
 class LoggerService:
     def __init__(self, settings):
         self.settings = settings
@@ -8,8 +14,9 @@ class LoggerService:
         
 
     def log_query(self, query):
-        print(f"loggin query: {query}")
+        logger.info("Logging Query:", query)
     def log_env_details(self):
+        logger.info("Logging mode details")
         print(self.settings.model_name)
  
 # Git staging demo
