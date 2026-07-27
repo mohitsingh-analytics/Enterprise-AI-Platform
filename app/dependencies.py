@@ -35,17 +35,17 @@ def get_memory_service():
 
 
 def get_document_loader():
-    return DocumentLoader
+    return DocumentLoader()
 def get_cleaner():
-    return Cleaner
+    return Cleaner()
 def get_chunker():
-    return Chunker
+    return Chunker()
 def get_embedding_service():
-    return EmbeddingService
+    return EmbeddingService()
 def get_metadata_builder():
-    return MetadataBuilder
+    return MetadataBuilder()
 def get_vector_store():
-    return VectorStore
+    return VectorStore()
 
 def get_ingestion_service(
     loader=Depends(get_document_loader),

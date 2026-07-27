@@ -25,4 +25,8 @@ class ChatRequest(BaseModel):
     context: str
     prompt_type: str
 
+class DocLoad(BaseModel):
+    docname: str
+    
+
    
