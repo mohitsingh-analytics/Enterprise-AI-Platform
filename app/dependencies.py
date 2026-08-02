@@ -14,7 +14,7 @@ from ingestion.ingestion_service import IngestionService
 from app.config import settings
 from fastapi import Depends
 memory_service = MemoryService()
-def get_settings():
+def get_settings(): 
     return settings
 
 def get_ai_service(settings=Depends(get_settings)):

@@ -21,15 +21,37 @@ from pydantic import BaseModel
 from fastapi import Depends
 import uuid
 from app.middleware import RequestMiddleware
+from app.exception_handler import global_exception_handler
+from exceptions.exceptions import ValidationException
+from fastapi.responses import JSONResponse
+
+
 
 app = FastAPI()
 app.add_middleware(RequestMiddleware)
+app.add_exception_handler(
+    Exception,
+    global_exception_handler
+    ) 
+
 
 @app.get("/")
 def home(logger: LoggerService = Depends(get_log_service)):
     logger.log_env_details()
     return {"message": "Enterprise AI Platform is running"}
 
+
+
+@app.exception_handler(ValidationException)
+async def validation_exception_handler(request, exc):
+
+    return JSONResponse(
+        status_code=400, 
+        content={
+            "status":"FAILED",
+            "message":str(exc)
+        }
+    )   
 @app.post("/documents/upload")
 def uploaddocs(
     request: DocLoad,
@@ -42,7 +64,7 @@ def uploaddocs(
 def health():
     return {
             "status":"healthy",
-            "version":"1.0",
+            "version":"1.0", 
             "llm":"Azure OpenAI"
             }
 
