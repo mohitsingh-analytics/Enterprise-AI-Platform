@@ -5,6 +5,7 @@ from ingestion.embedding_service import EmbeddingService
 from ingestion.metadata_builder import MetadataBuilder
 from ingestion.vector_store import VectorStore
 from services.logger import logger
+from models.request_models import ApiResponse
 
 
 class IngestionService:
@@ -43,7 +44,8 @@ class IngestionService:
              metadata
         )
         logger.info("vector store run")
-        return{
-            "status": "Completed",
-            
-        }
+        return ApiResponse(
+           success=True,
+           message="Document ingested successfully.",
+           data=None
+          )
