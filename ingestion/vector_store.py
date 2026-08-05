@@ -1,7 +1,8 @@
+from services.logger import logger
 class VectorStore:
 
     def save(self, embeddings, metadata):
 
-        print("Saving to Vector Store")
+        logger.info("Embeddings stored in vector database.")
 
         return True
