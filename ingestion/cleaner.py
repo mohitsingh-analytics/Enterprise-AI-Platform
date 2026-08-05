@@ -1,5 +1,7 @@
+from services.logger import logger
+
 class Cleaner:
     def clean(self,text):
-        print("Cleaning Text")
+        logger.info("Cleaning Text")
         return text.strip()
     

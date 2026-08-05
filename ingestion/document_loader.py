@@ -1,5 +1,8 @@
 from exceptions.exceptions import DocumentNotFoundException
 from exceptions.exceptions import ValidationException
+from services.logger import logger
+
+
 
 class DocumentLoader:
     def load(self,file_name):
@@ -9,7 +12,7 @@ class DocumentLoader:
              )
     #    if file_not_exist:
     #        raise DocumentNotFoundException(file_name)
-        print(f"Loading file_name",file_name)
+        logger.info(f"Loading file_name: {file_name}")
         return "this is sample document text"
 
     

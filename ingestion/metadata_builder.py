@@ -1,8 +1,9 @@
+from services.logger import logger
 class MetadataBuilder:
 
     def build(self, chunks):
-        print("Building metadata")
-        
+        logger.info("Building metadata successfully")
+
         result = []
         for i, _ in enumerate(chunks):
             result.append({
