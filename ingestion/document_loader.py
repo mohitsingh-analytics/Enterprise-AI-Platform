@@ -15,4 +15,3 @@ class DocumentLoader:
         logger.info(f"Loading file_name: {file_name}")
         return "this is sample document text"
 
-    
