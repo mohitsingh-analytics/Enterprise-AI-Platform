@@ -66,23 +66,37 @@ def update_document_status(document_id, status):
 
     return read_model[document_id]
 
-
 def process_events():
-    print("\n[EVENT] Event processing started.")
-    time.sleep(3)
+
+    print("\n[PROJECTION] Starting...")
+
+    time.sleep(2)
 
     while event_queue:
+
         event = event_queue.pop(0)
-        document_id = event["document_id"]  
+
+        document_id = event["document_id"]
+
+        print(
+            f"[PROJECTION] Processing {event['event_type']} "
+            f"for {document_id}"
+        )
+
+        # Simulate projection failure
+        if event["event_type"] == "DocumentIndexed":
+            print("[PROJECTION] ❌ Projection failed!")
+            raise Exception("Read model database unavailable")
+
         read_model[document_id] = {
             "document_id": document_id,
             "file_name": event["file_name"],
-            "status": event["status"],
-            "embedding_version": event["embedding_version"]
+            "status": event["status"]
         }
 
-        print(f"[EVENT] Processed event for document: {document_id}")
-
+        print(
+            f"[PROJECTION] Read model updated for {document_id}"
+        )
 def get_document_status(document_id):
     print("[QUERY] Fetching document status...")
     document = read_model.get(document_id)
@@ -110,19 +124,9 @@ print("===================================")
 print("DAY 134 - CQRS DEMO")
 print("===================================")
 
-response = upload_document("DOC-001", "sales.pdf")
+response = upload_document("DOC-001", "annual_report.pdf")
 print("\nUpload response:")
 print(response)
-
-
-response = upload_document("DOC-002", "finance.pdf")
-print("\nUpload response:")
-print(response)
-
-response = upload_document("DOC-003", "hr.pdf")
-print("\nUpload response:")
-print(response)
-
 
 
 print("\nImmediately checking status:")
