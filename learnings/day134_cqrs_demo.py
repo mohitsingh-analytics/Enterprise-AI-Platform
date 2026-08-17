@@ -148,10 +148,4 @@ status = get_document_status("DOC-001")
 
 print(status)
 
-print("\nDocuments using embedding-v1:")
-
-results = get_documents_by_embedding_version("v1")
-
-for document in results:
-    print(document)
-
+process_events()
