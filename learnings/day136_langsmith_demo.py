@@ -1,6 +1,8 @@
-import os
-
 from langsmith import traceable
+from langsmith import Client
+
+
+client = Client()
 
 
 @traceable
@@ -23,6 +25,7 @@ def retrieve_documents(question):
 
     return documents
 
+
 @traceable
 def generate_answer(question, context):
 
@@ -30,7 +33,9 @@ def generate_answer(question, context):
 
 
 @traceable
-def rag_pipeline(question):
+def rag_pipeline(inputs):
+
+    question = inputs["question"]
 
     documents = retrieve_documents(question)
 
@@ -39,11 +44,33 @@ def rag_pipeline(question):
         documents
     )
 
-    return answer
+    return {
+        "answer": answer
+    }
 
 
-question = "Does international travel require approval?"
+def evaluate_answer(run, example):
 
-answer = rag_pipeline(question)
+    actual_answer = run.outputs["answer"]
 
-print(answer)
+    expected_answer = example.outputs["answer"]
+
+    score = (
+        actual_answer.strip().lower()
+        == expected_answer.strip().lower()
+    )
+
+    return {
+        "key": "answer_correct",
+        "score": 1 if score else 0
+    }
+
+
+results = client.evaluate(
+    rag_pipeline,
+    data="ai-architect-rag-evaluation",
+    evaluators=[evaluate_answer],
+    experiment_prefix="day136-rag-baseline"
+)
+
+print(results)
