@@ -21,3 +21,8 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+# Generated data / learning artifacts
+learnings/data/
+
+learnings/data/
