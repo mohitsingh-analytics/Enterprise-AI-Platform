@@ -61,8 +61,20 @@ def route_tool(state: AgentState):
 
     return "tool"
 
+def answer_node(state: AgentState):
 
+    print("Generating answer...")
+
+    return {
+        "answer": f"Answer based on: {state['tool_name']} with answer as {state['answer']}"
+    }
 from langgraph.graph import StateGraph, START, END
+
+def tool_selection_node(state: AgentState):
+
+    return {
+        "tool_name": tool_router(state)
+    }
 
 
 builder = StateGraph(AgentState)
@@ -87,11 +99,6 @@ builder.add_edge("answer", END)
 
 graph = builder.compile()
 
-def tool_selection_node(state: AgentState):
-
-    return {
-        "tool_name": tool_router(state)
-    }
 
 
 
@@ -104,3 +111,5 @@ result = graph.invoke(
         "answer": ""
     }
 )
+
+print(result)
