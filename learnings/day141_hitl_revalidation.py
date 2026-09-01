@@ -9,7 +9,30 @@ class AgentState(TypedDict):
     approved:bool
     approval:dict
     validation_passed:bool
+    idempotency_key:str
     result:str
+
+processed_transactions = {}
+
+def check_idempotency(state:AgentState):
+    print("Checking Idempotency..")
+    key=state["idempotency_key"]
+    if key in processed_transactions:
+        print("Transaction already processed...")
+
+        return{
+            "result": processed_transactions[key]
+        }
+    print("Transaction has not been processed.")
+    return {
+        "result":""
+    }
+
+def route_after_idempotency(state: AgentState):
+    if state["result"]:
+        return END
+
+    return "charge_customer"
 
 def revalidate_transaction(state:AgentState):
     print("Revalidating transaction...")
@@ -56,13 +79,18 @@ def request_approval(state: AgentState):
     }
 
 def charge_customer(state: AgentState):
+
     print("Executing charge...")
 
-    return{
-        "result": (
-            f"Cusomer {state['customer_id']}"
-            f"charged INR {state['amount']}"
-        )
+    result = (
+        f"Customer {state['customer_id']} "
+        f"charged INR {state['amount']}"
+    )
+
+    processed_transactions[state["idempotency_key"]] = result
+
+    return {
+        "result": result
     }
 
 
@@ -90,14 +118,16 @@ builder.add_node("policy_check", policy_check)
 builder.add_node("request_approval", request_approval)
 builder.add_node("revalidate_transaction",revalidate_transaction)
 builder.add_node("charge_customer", charge_customer)
+builder.add_node(
+    "check_idempotency",
+    check_idempotency
+)
 
-## policy Check -> revalidate transaction -> if yes, request approval -> charge customer
 
-## policy Check -> revalidate transaction -> if no, then transaction failed
 def route_after_revalidation(state: AgentState):
 
     if state["validation_passed"]:
-        return "charge_customer"
+        return "check_idempotency"
 
     return END
 
@@ -118,6 +148,12 @@ builder.add_conditional_edges(
     route_after_revalidation
 )
 
+builder.add_conditional_edges(
+    "check_idempotency",
+    route_after_idempotency
+)
+
+
 builder.add_edge("charge_customer", END)
 
 checkpointer = InMemorySaver()
@@ -136,6 +172,7 @@ result = graph.invoke(
         "amount": 50000,
         "approved": False,
         "requires_approval":False,
+        "idempotency_key": "TXN-001",
         "result":""
 
     },
