@@ -3,6 +3,18 @@ import inspect
 mcp=MCPServer("CustomerService")
 
 @mcp.tool()
+def refund_customer(customer_id:str, amount:int):
+    """Process a refund for a customer"""
+    # Simulate refunding a customer
+    print(f"Refunding {amount} to customer {customer_id}")
+    return {
+        "customer_id": customer_id,
+        "amount": amount,
+        "currency": "INR",
+        "status": "REFUND_PROCESSED"
+    }
+
+@mcp.tool()
 def get_customer_status(customer_id:str):
     """Get the status of a customer"""
     statuses={
