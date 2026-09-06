@@ -9,7 +9,14 @@ from mcp import Client
 
 load_dotenv()
 
-user_query = "Is customer C002 active and what is their current balance?"
+user_query = "Is customer C999 active and what is their current balance?"
+
+TOOL_PERMISSIONS = {
+    "get_customer_status": "CUSTOMER_READ",
+    "get_customer_balance": "CUSTOMER_READ",
+    "refund_customer":"REFUND",
+    "delete_customer":"ADMIN",
+}
 
 
 async def main():
@@ -101,9 +108,13 @@ async def main():
         if status_input:
 
             print("\n--- Executing STATUS first ---")
-
-            status_result = await mcp_client.call_tool(
-                "get_customer_status",
+            user_permissions = ["CUSTOMER_READ"]  # Example user permissions
+            if not authorize_tool(tool_name,user_permissions):
+                print(f"\n--- Authorization failed for tool: {tool_name} ---")
+                return 
+            status_result = await execute_mcp_tool(
+                mcp_client,
+                "get_customer_status",  
                 status_input
             )
 
@@ -114,42 +125,58 @@ async def main():
             # 7. Extract business payload from MCP response
             # -------------------------------------------------
 
-            status_data = json.loads(
-                status_result.content[0].text
-            )
+            status_data = json.loads(status_result.content[0].text)
 
-            status = status_data["status"]
+            # Handle tool-level/business error first
+            if "error" in status_data:
+                print("\n--- Status Check Failed ---")
+                print("Error:", status_data["error"])
 
-            print("\nCustomer status:", status)
-
-            # -------------------------------------------------
-            # 8. APPLICATION POLICY CHECK
-            # -------------------------------------------------
-
-            if status.lower() == "active" and balance_input:
-
-                print("\n--- Policy: ACTIVE → Balance allowed ---")
-
-                balance_result = await mcp_client.call_tool(
-                    "get_customer_balance",
-                    balance_input
-                )
-
-                print("\nBalance Result:")
-                print(
-                    balance_result.model_dump_json(indent=2)
-                )
+                print("\n--- Policy: Customer could not be validated → Balance BLOCKED ---")
 
             else:
+                status = status_data.get("status")
 
-                print(
-                    "\n--- Policy: Customer is NOT ACTIVE "
-                    "→ Balance BLOCKED ---"
-                )
+                print("\nCustomer status:", status)
 
-        else:
+                if status == "ACTIVE" and balance_input:
+                    print("\n--- Policy: ACTIVE → Balance allowed ---")
 
-            print("\nNo customer status request was provided.")
+                    balance_result = await execute_mcp_tool(
+                        mcp_client,
+                        "get_customer_balance",
+                        balance_input
+                    )
+
+                    print("\nBalance Result:")
+                    print(balance_result.model_dump_json(indent=2))
+
+                else:
+                    print("\n--- Policy: Customer is NOT ACTIVE → Balance BLOCKED ---")
+
+async def execute_mcp_tool(mcp_client, tool_name, tool_input):
+    try:
+        result=await mcp_client.call_tool(tool_name,tool_input)
+        return{
+            "success":True,
+            "result":result,
+            "error":None
+              }
+    except Exception as e:
+        print(f"\n MCP Tool execution failed: {tool_name}")
+        print("Technical error:",str(e))
+        return{
+            "success":False,
+            "result":None,
+            "error":"The service requested is currently unavailable. Please try again later."
+        }
+
+def authorize_tool(tool_name,user_permissions):
+    # Implement your authorization logic here
+    # For example, check if the user has the required permissions for the tool
+    if tool_name=="get_customer_status" and "CUSTOMER_READ" not in user_permissions:
+        return False
+    return True
 
 
 if __name__ == "__main__":
