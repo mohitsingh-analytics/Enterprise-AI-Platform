@@ -1,15 +1,18 @@
 import asyncio
 import json
 import os
+from sentence_transformers import SentenceTransformer
 
 from dotenv import load_dotenv
 from anthropic import AsyncAnthropic
 from mcp import Client
+from sklearn.metrics.pairwise import cosine_similarity
 
+embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 load_dotenv()
 
-user_query = "Is customer C999 active and what is their current balance?"
+user_query = "Is customer C999 active and REFUND 25001 inr?"
 
 TOOL_PERMISSIONS = {
     "get_customer_status": "CUSTOMER_READ",
@@ -18,7 +21,12 @@ TOOL_PERMISSIONS = {
     "delete_customer":"ADMIN",
 }
 
-
+APPROVAL_POLICIES={
+    "refund_customer":{
+        "approved_required_above":25000,
+        "amount_field":"amount"
+    }
+}
 async def main():
 
     # ---------------------------------------------------------
@@ -37,9 +45,49 @@ async def main():
         # 3. Discover tools from MCP Server
         # -----------------------------------------------------
         tools_result = await mcp_client.list_tools()
+        TOOL_REGISTRY= [{"name":t.name, "description":t.description, "input_schema":t.input_schema}
+                         for t in tools_result.tools]
+        
+        print(type(TOOL_REGISTRY))
+        print(TOOL_REGISTRY)
+
+        for tool in TOOL_REGISTRY:
+            print(tool["name"])
+            print(tool["description"])
 
         claude_tools = []
+        print("\nTools selected by router:")
+        selected_tools = route_tools(user_query, TOOL_REGISTRY)
 
+        for tool in selected_tools:
+            print(tool["name"])            
+
+        tool_text= [
+            f"{tool['name']} : {tool['description']}"
+            for tool in TOOL_REGISTRY
+        ]
+
+        tool_embeddings =embedding_model.encode(tool_text)
+        print(type(tool_embeddings))
+        print(tool_embeddings.shape)
+
+
+        query_embedding=embedding_model.encode([user_query])
+        similarity = cosine_similarity(
+            query_embedding,
+            tool_embeddings
+        )[0]
+
+        for tool, score in zip(TOOL_REGISTRY,similarity):
+            print(f"{tool['name']}:{score:.4f}")
+        
+        top_indices = similarity.argsort()[-2:][::-1]
+        for index in top_indices:
+            print(
+              TOOL_REGISTRY[index]["name"],
+              similarity[index]
+             )
+            
         for tool in tools_result.tools:
 
             claude_tools.append(
@@ -112,12 +160,19 @@ async def main():
             if not authorize_tool(tool_name,user_permissions):
                 print(f"\n--- Authorization failed for tool: {tool_name} ---")
                 return 
-            status_result = await execute_mcp_tool(
+            if not request_approval(tool_name, tool_input):
+                print(f"\n--- Approval denied for tool: {tool_name} ---")
+                return
+            status_response = await execute_mcp_tool(
                 mcp_client,
                 "get_customer_status",  
                 status_input
             )
-
+            if not status_response["success"]:
+                print("\n--- Status Check Failed ---")
+                print("Error:", status_response["error"])
+                return
+            status_result = status_response["result"]
             print("\nStatus Result:")
             print(status_result.model_dump_json(indent=2))
 
@@ -178,6 +233,38 @@ def authorize_tool(tool_name,user_permissions):
         return False
     return True
 
+def requires_approval(tool_name, tool_input):
+    # Implement your approval logic here
+    # For example, check if the tool requires approval based on the amount
+    policy=APPROVAL_POLICIES.get(tool_name)
+    if not policy:
+        return False
+    amount=tool_input.get(policy["amount_field"])
+
+    return amount is not None and amount>policy["approved_required_above"]
+
+
+def request_approval(tool_name, tool_input):
+    # Implement your approval request logic here
+    # For example, send an approval request to the appropriate authority
+    
+    if requires_approval(tool_name, tool_input):
+      decision=input(f"Approval required for {tool_name} with amount {tool_input.get('amount', 0)}. Approve? (yes/no): ")
+      return decision.lower() == "yes"
+    # Simulate approval process
+    return True
+
+def route_tools(user_query, tool_registry):
+    query = user_query.lower()
+    selected_tools = []
+    for tool in tool_registry:
+        if any(
+            keyword in query
+            for keyword in tool["description"].lower().split()
+
+               ):
+            selected_tools.append(tool)
+    return selected_tools
 
 if __name__ == "__main__":
     asyncio.run(main())
