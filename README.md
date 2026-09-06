@@ -46,3 +46,29 @@ MCP Client
 MCP Server
  ↓
 Enterprise Capability
+
+## 🏗️ Production-Oriented MCP Architecture
+
+The current implementation is evolving from a basic MCP integration
+toward production-grade AI orchestration.
+
+```text
+User
+ ↓
+Claude
+ ↓
+Tool Selection
+ ↓
+AI Application / Orchestrator
+ │
+ ├── Business Policy
+ ├── Authorization
+ ├── Validation
+ ├── Retry & Error Handling
+ └── Idempotency
+ ↓
+MCP Client
+ ↓
+MCP Server
+ ↓
+Enterprise Capability
