@@ -27,6 +27,49 @@ APPROVAL_POLICIES={
         "amount_field":"amount"
     }
 }
+
+STOP_WORDS= {
+    "is",
+    "are",
+    "the",
+    "a",
+    "an",
+    "and",
+    "or",
+    "in",
+    "of",
+    "to",
+    "for"
+}
+
+TOOL_METADATA = {
+    "get_customer_status": {
+        "domain": "customer",
+        "capabilities": [
+            "check customer status",
+            "determine whether customer is active",
+            "verify customer account status"
+        ]
+    },
+
+    "get_customer_balance": {
+        "domain": "customer",
+        "capabilities": [
+            "check customer balance",
+            "retrieve account balance",
+            "find money available in customer account"
+        ]
+    },
+
+    "refund_customer": {
+        "domain": "customer",
+        "capabilities": [
+            "refund customer",
+            "return money to customer",
+            "process customer refund"
+        ]
+    }
+}
 async def main():
 
     # ---------------------------------------------------------
@@ -49,10 +92,20 @@ async def main():
             "name":t.name,
             "description":t.description,
             "input_schema":t.input_schema,
-            "search_text":f"{t.name} : {t.description}"
+            "search_text":(
+                f"{t.name}"
+                f"{t.description}"
+                f"{''.join(TOOL_METADATA[t.name]['capabilities'])}"
+                             )
             }
                          for t in tools_result.tools]
-
+        ## REMOVE STOP WORDS
+        query_words = set(user_query.lower().split())
+        query_words = {
+            words
+            for words in user_query.lower().split()
+            if words not in STOP_WORDS
+        }
         #KEYWORD SEARCH
         #-----------------------------------
         keyword_results=keyword_tool_search(
