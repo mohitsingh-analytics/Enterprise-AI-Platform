@@ -84,12 +84,20 @@ async def main():
             print(f"{tool['name']}:{score:.4f}")
         
         top_indices = similarity.argsort()[-2:][::-1]
-        for index in top_indices:
+
+        hybrid_results = hybrid_tool_search(
+                            TOOL_REGISTRY,
+                            similarity,
+                            keyword_results
+                        )
+
+        for results in hybrid_results:
             print(
-              TOOL_REGISTRY[index]["name"],
-              similarity[index]
-             )
-            
+                results["tool"]["name"],
+                "semantic":result["semantic_score"],
+                "keyword":result["keyword_score"],
+                "hybrid":result["hybrid_score"]
+            )
         for tool in tools_result.tools:
 
             claude_tools.append(
@@ -288,12 +296,46 @@ def keyword_tool_search(user_query,tool_registry):
     return matches
 
 def hybrid_tool_search(
-        user_query,
         tool_registry,
-        similarities
+        semantic_scores,
+        keyword_results,
+        semantic_weight =0.7,
+        keyword_weight=0.3,
         top_k=3
 ):
-    return
+    keyword_scores={
+        result["tool"]["name"]: result["keyword_score"]
+        for result in keyword_results
+    }
+    ranked_tools = []
+
+    for tool, semantic_scores in zip(
+        tool_registry, 
+        semantic_scores
+    ):
+        keyword_score=keyword_scores.get(
+            tool["name"],
+            0
+        )
+
+        hybrid_score=(
+            semantic_scores * semantic_weight
+            +
+            keyword_score * keyword_weight
+        )
+
+        ranked_tools.append({
+            "tool":tool,
+            "semantic_score":semantic_scores,
+            "keyword_score": keyword_score,
+            "hybrid_score":hybrid_score
+        })
+
+        ranked_tools.sort(
+            key = lambda x:x["hybrid_score"],
+            reverse=True
+        )
+    return ranked_tools[:top_k]
     
 
 if __name__ == "__main__":
