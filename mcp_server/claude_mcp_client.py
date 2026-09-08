@@ -45,33 +45,35 @@ async def main():
         # 3. Discover tools from MCP Server
         # -----------------------------------------------------
         tools_result = await mcp_client.list_tools()
-        TOOL_REGISTRY= [{"name":t.name, "description":t.description, "input_schema":t.input_schema}
+        TOOL_REGISTRY= [{
+            "name":t.name,
+            "description":t.description,
+            "input_schema":t.input_schema,
+            "search_text":f"{t.name} : {t.description}"
+            }
                          for t in tools_result.tools]
+
+        #KEYWORD SEARCH
+        #-----------------------------------
+        keyword_results=keyword_tool_search(
+            user_query,
+            TOOL_REGISTRY
+        )
+
         
-        print(type(TOOL_REGISTRY))
-        print(TOOL_REGISTRY)
-
-        for tool in TOOL_REGISTRY:
-            print(tool["name"])
-            print(tool["description"])
-
         claude_tools = []
         print("\nTools selected by router:")
         selected_tools = route_tools(user_query, TOOL_REGISTRY)
 
-        for tool in selected_tools:
-            print(tool["name"])            
 
+        
         tool_text= [
-            f"{tool['name']} : {tool['description']}"
+            tool["search_text"]
             for tool in TOOL_REGISTRY
         ]
 
         tool_embeddings =embedding_model.encode(tool_text)
-        print(type(tool_embeddings))
-        print(tool_embeddings.shape)
-
-
+       
         query_embedding=embedding_model.encode([user_query])
         similarity = cosine_similarity(
             query_embedding,
@@ -265,6 +267,34 @@ def route_tools(user_query, tool_registry):
                ):
             selected_tools.append(tool)
     return selected_tools
+
+
+def keyword_tool_search(user_query,tool_registry):
+    query= user_query.lower()
+
+    matches=[]
+
+    for tool in tool_registry:
+        tool_words = set(tool["search_text"].lower().split())
+
+        query_words=set(query.split())
+        overlap= query_words.intersection(tool_words)
+
+        if overlap:
+            matches.append({
+                "tool":tool,
+                "matched_words": overlap
+            })
+    return matches
+
+def hybrid_tool_search(
+        user_query,
+        tool_registry,
+        similarities
+        top_k=3
+):
+    return
+    
 
 if __name__ == "__main__":
     asyncio.run(main())
