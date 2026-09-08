@@ -94,10 +94,11 @@ async def main():
         for results in hybrid_results:
             print(
                 results["tool"]["name"],
-                "semantic":result["semantic_score"],
-                "keyword":result["keyword_score"],
-                "hybrid":result["hybrid_score"]
+                "semantic:",results["semantic_score"],
+                "keyword:",results["keyword_score"],
+                "hybrid:",results["hybrid_score"]
             )
+
         for tool in tools_result.tools:
 
             claude_tools.append(
@@ -287,11 +288,12 @@ def keyword_tool_search(user_query,tool_registry):
 
         query_words=set(query.split())
         overlap= query_words.intersection(tool_words)
-
+        keyword_score = len(overlap)/len(query_words)
         if overlap:
             matches.append({
                 "tool":tool,
-                "matched_words": overlap
+                "matched_words": overlap,
+                "keyword_score":keyword_score
             })
     return matches
 
@@ -299,44 +301,47 @@ def hybrid_tool_search(
         tool_registry,
         semantic_scores,
         keyword_results,
-        semantic_weight =0.7,
+        semantic_weight=0.7,
         keyword_weight=0.3,
         top_k=3
 ):
-    keyword_scores={
+
+    keyword_scores = {
         result["tool"]["name"]: result["keyword_score"]
         for result in keyword_results
     }
+
     ranked_tools = []
 
-    for tool, semantic_scores in zip(
-        tool_registry, 
+    for tool, semantic_score in zip(
+        tool_registry,
         semantic_scores
     ):
-        keyword_score=keyword_scores.get(
+
+        keyword_score = keyword_scores.get(
             tool["name"],
             0
         )
 
-        hybrid_score=(
-            semantic_scores * semantic_weight
+        hybrid_score = (
+            semantic_score * semantic_weight
             +
             keyword_score * keyword_weight
         )
 
         ranked_tools.append({
-            "tool":tool,
-            "semantic_score":semantic_scores,
+            "tool": tool,
+            "semantic_score": semantic_score,
             "keyword_score": keyword_score,
-            "hybrid_score":hybrid_score
+            "hybrid_score": hybrid_score
         })
 
-        ranked_tools.sort(
-            key = lambda x:x["hybrid_score"],
-            reverse=True
-        )
+    ranked_tools.sort(
+        key=lambda x: x["hybrid_score"],
+        reverse=True
+    )
+
     return ranked_tools[:top_k]
-    
 
 if __name__ == "__main__":
     asyncio.run(main())
