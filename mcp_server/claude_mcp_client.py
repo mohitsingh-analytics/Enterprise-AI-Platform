@@ -14,6 +14,8 @@ load_dotenv()
 
 user_query = "Is customer C999 active and REFUND 25001 inr?"
 
+user_permissions = ["CUSTOMER_READ", "REFUND"]
+
 TOOL_PERMISSIONS = {
     "get_customer_status": "CUSTOMER_READ",
     "get_customer_balance": "CUSTOMER_READ",
@@ -143,6 +145,17 @@ async def main():
                             similarity,
                             keyword_results
                         )
+                
+        authorized_tools = filter_authorized_tools(
+            hybrid_results,
+            user_permissions
+        )
+
+        for result in authorized_tools:
+            print(
+                result["tool"]["name"],
+                result["hybrid_score"]
+            )
 
         for results in hybrid_results:
             print(
@@ -152,13 +165,13 @@ async def main():
                 "hybrid:",results["hybrid_score"]
             )
 
-        for tool in tools_result.tools:
+        for tool in authorized_tools:
 
             claude_tools.append(
                 {
-                    "name": tool.name,
-                    "description": tool.description,
-                    "input_schema": tool.input_schema,
+                    "name": tool.get("name"),
+                    "description": tool.get("description"),
+                    "input_schema": tool.get("input_schema"),
                 }
             )
 
@@ -220,7 +233,7 @@ async def main():
         if status_input:
 
             print("\n--- Executing STATUS first ---")
-            user_permissions = ["CUSTOMER_READ"]  # Example user permissions
+            #user_permissions = ["CUSTOMER_READ"]  # Example user permissions
             if not authorize_tool(tool_name,user_permissions):
                 print(f"\n--- Authorization failed for tool: {tool_name} ---")
                 return 
@@ -293,9 +306,10 @@ async def execute_mcp_tool(mcp_client, tool_name, tool_input):
 def authorize_tool(tool_name,user_permissions):
     # Implement your authorization logic here
     # For example, check if the user has the required permissions for the tool
-    if tool_name=="get_customer_status" and "CUSTOMER_READ" not in user_permissions:
+    required_permission = TOOL_PERMISSIONS.get(tool_name)
+    if required_permission is None:
         return False
-    return True
+    return required_permission in user_permissions
 
 def requires_approval(tool_name, tool_input):
     # Implement your approval logic here
@@ -395,6 +409,48 @@ def hybrid_tool_search(
     )
 
     return ranked_tools[:top_k]
+
+
+print(
+    authorize_tool(
+        "get_customer_status",
+        user_permissions
+    )
+)
+
+print(
+    authorize_tool(
+        "refund_customer",
+        user_permissions
+    )
+)
+
+print(
+    authorize_tool(
+        "unknown_tool",
+        user_permissions
+    )
+)
+
+def filter_authorized_tools(
+    ranked_tools,
+    user_permissions
+):
+    authorized_tools = []
+
+    for result in ranked_tools:
+
+        tool_name = result["tool"]["name"]
+
+        if authorize_tool(
+            tool_name,
+            user_permissions
+        ):
+            authorized_tools.append(result)
+
+    return authorized_tools
+
+
 
 if __name__ == "__main__":
     asyncio.run(main())
