@@ -145,7 +145,12 @@ async def main():
                             similarity,
                             keyword_results
                         )
-                
+        print("\n ------Candidate Tools----- ")
+        for result in hybrid_results:
+            print(
+                result["tool"]["name"],
+                result["hybrid_score"]
+            )        
         authorized_tools = filter_authorized_tools(
             hybrid_results,
             user_permissions
